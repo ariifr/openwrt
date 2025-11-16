@@ -69,8 +69,9 @@ jobs:
 
       - name: Generate configuration file
         run: |
-          cp -rf ./productconfig/${{ inputs.set_target }}_defconfig .config
-          make oldconfig
+          CONFIG_URL="https://raw.githubusercontent.com/paralelunipers/openwrt_8820v2/refs/heads/openwrt-23.05/productconfig/zte_e8820v2_defconfig"
+          wget -q --show-progress -O .config $CONFIG_URL
+          make defconfig
 
       - name: Download packages
         run: make download -j16
