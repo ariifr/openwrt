@@ -682,3 +682,14 @@ define Device/zbt-wg3526-32M
 	kmod-usb3 kmod-usb-ledtrig-usbport wpad-basic
 endef
 TARGET_DEVICES += zbt-wg3526-32M
+
+define Device/zte_e8820v2
+  $(Device/dsa-migration)
+  $(Device/uimage-lzma-loader)
+  IMAGE_SIZE := 16064k
+  DEVICE_VENDOR := ZTE
+  DEVICE_MODEL := E8820V2
+  DEVICE_PACKAGES := \
+  kmod-mt76 kmod-mt7603 kmod-mt76x2 kmod-usb3 kmod-usb-ledtrig-usbport wpad hostapd-utils
+endef
+TARGET_DEVICES += zte_e8820v2
