@@ -36,7 +36,6 @@ jobs:
           DEBIAN_FRONTEND: noninteractive
         run: |
           rm -rf /usr/share/dotnet /etc/mysql /etc/php /usr/local/lib/android
-          apt-mark hold grub-efi-amd64-signed
           apt update
 
           # Install Python 2.7 and essential build dependencies for OpenWrt 19.07
