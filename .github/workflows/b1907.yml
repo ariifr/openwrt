@@ -92,7 +92,9 @@ jobs:
             xxd
 
           apt clean
-          timedatectl set-timezone "Asia/Jakarta"
+          
+          ln -sf /usr/share/zoneinfo/Asia/Jakarta /etc/localtime
+          echo "Asia/Jakarta" > /etc/timezone
 
       - name: Checkout OpenWrt 19.07
         uses: actions/checkout@v4
