@@ -1,0 +1,178 @@
+# 
+# <https://github.com/KFERMercer/OpenWrt-CI>
+#
+# Copyright (C) 2019 P3TERX
+#
+# Copyright (C) 2020 KFERMercer
+#
+name: Build OpenWrt 19.07
+
+on:
+  repository_dispatch:
+  workflow_dispatch:
+    inputs:
+      set_target:
+        description: "Select Target Device for LEDE."
+        required: false
+        default: "zte_e8820v2"
+        type: choice
+        options:
+          - zte_e8820v2
+          - phicomm_k2p
+
+jobs:
+  build_openwrt:
+
+    name: Build OpenWrt Firmware
+
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:20.04
+      options: --user root
+
+    steps:
+      - name: Space cleanup and Initialization environment
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          rm -rf /usr/share/dotnet /etc/mysql /etc/php /usr/local/lib/android
+          apt-mark hold grub-efi-amd64-signed
+          apt update
+
+          # Install Python 2.7 and essential build dependencies for OpenWrt 19.07
+          apt install -y python2.7 python2.7-dev
+          ln -sf /usr/bin/python2.7 /usr/bin/python
+          ln -sf /usr/bin/python2.7 /usr/bin/python2
+
+          # Install build dependencies for OpenWrt 19.07
+          apt install -y \
+            build-essential \
+            clang \
+            gcc \
+            g++ \
+            bash \
+            gawk \
+            git \
+            libncurses-dev \
+            libssl-dev \
+            python3 \
+            unzip \
+            wget \
+            file \
+            rsync \
+            subversion \
+            flex \
+            bison \
+            zip \
+            curl \
+            zlib1g-dev \
+            ccache \
+            cmake \
+            cpio \
+            gettext \
+            gperf \
+            help2man \
+            libelf-dev \
+            libglib2.0-dev \
+            libgmp3-dev \
+            libltdl-dev \
+            libmpc-dev \
+            libmpfr-dev \
+            libreadline-dev \
+            libtool \
+            p7zip-full \
+            pkgconf \
+            python3-pip \
+            python3-ply \
+            qemu-utils \
+            squashfs-tools \
+            swig \
+            texinfo \
+            upx-ucl \
+            xmlto \
+            xxd
+
+          apt clean
+          timedatectl set-timezone "Asia/Jakarta"
+
+      - name: Checkout OpenWrt 19.07
+        uses: actions/checkout@v4
+        with:
+          ref: openwrt-19.07
+
+      - name: Update feeds
+        run: |
+          export FORCE_UNSAFE_CONFIGURE=1
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
+      - name: Generate configuration file
+        run: |
+          CONFIG_URL="https://raw.githubusercontent.com/paralelunipers/openwrt_8820v2/refs/heads/openwrt-23.05/productconfig/zte_e8820v2_defconfig"
+          wget -q --show-progress -O .config $CONFIG_URL
+          # Fix Python version in config for OpenWrt 19.07
+          sed -i 's/PYTHON3:/PYTHON:/g' .config
+          sed -i 's/PYTHON3=/PYTHON=/g' .config
+          make defconfig
+
+      - name: Download packages
+        run: |
+          export FORCE_UNSAFE_CONFIGURE=1
+          make download -j8
+          # Clean invalid downloads
+          find dl -size -1024c -exec rm -f {} \;
+
+      - name: Update config
+        run: |
+          export FORCE_UNSAFE_CONFIGURE=1
+          make oldconfig
+
+      - name: Compile firmware
+        run: |
+          export FORCE_UNSAFE_CONFIGURE=1
+          # Disable debug info to reduce firmware size
+          sed -i 's/CONFIG_DEBUG_INFO=y/# CONFIG_DEBUG_INFO is not set/' .config
+          sed -i 's/CONFIG_DEBUG=y/# CONFIG_DEBUG is not set/' .config
+          
+          echo "Starting build with $(nproc) threads..."
+          make -j$(nproc) || make -j1 V=s
+          
+          echo "======================="
+          echo "Build completed. Space usage:"
+          echo "======================="
+          df -h
+          echo "======================="
+          echo "Firmware files:"
+          find ./bin/targets/ -name "*.bin" -o -name "*.img" | xargs ls -lh
+          echo "======================="
+          du -h --max-depth=1 ./bin/targets/
+
+      - name: Prepare artifact
+        run: |
+          mkdir -p ./artifact/firmware
+          mkdir -p ./artifact/buildinfo
+          # Copy only firmware files, not packages to avoid huge size
+          cp -rf $(find ./bin/targets/ -type f \( -name "*.bin" -o -name "*.img" \)) ./artifact/firmware/ 2>/dev/null || true
+          cp -rf $(find ./bin/targets/ -type f \( -name "*.buildinfo" -o -name "*.manifest" \)) ./artifact/buildinfo/ 2>/dev/null || true
+
+      - name: Upload buildinfo
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenWrt_buildinfo
+          path: ./artifact/buildinfo/
+          retention-days: 7
+
+      - name: Upload firmware
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenWrt_firmware
+          path: ./artifact/firmware/
+          retention-days: 7
+
+      - name: Upload full firmware directory (backup)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenWrt_full_bin
+          path: ./bin/targets/
+          retention-days: 3
