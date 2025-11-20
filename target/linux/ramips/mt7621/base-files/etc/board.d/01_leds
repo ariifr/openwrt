@@ -170,6 +170,10 @@ zbtlink,zbt-wg1608-16m)
 	ucidef_set_led_netdev "lan4" "LAN4" "green:lan-4" "lan4"
 	ucidef_set_led_netdev "wan" "WAN" "green:wan" "wan"
 	;;
+zte,e8820v2)
+	ucidef_set_led_netdev"sys""SYS_LED" "$boardname:white:sys""eth0" "txrx"
+    ucidef_set_led_default"power""POWER_LED" "$boardname:white:power""1"
+    ;;
 esac
 
 board_config_flush
