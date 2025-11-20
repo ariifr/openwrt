@@ -2327,3 +2327,12 @@ define Device/zyxel_wap6805
   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
 endef
 TARGET_DEVICES += zyxel_wap6805
+
+define Device/zte_e8820v2
+	DTS := E8820V2
+    IMAGE_SIZE :=$(ralink_default_fw_size_16M)
+    DEVICE_TITLE := ZTE E8820V2
+    DEVICE_PACKAGES := \
+    kmod-mt76 kmod-mt7603 kmod-mt76x2 kmod-usb3 kmod-usb2 kmod-usb-ledtrig-usbport wpad hostapd-utils
+endef
+TARGET_DEVICES += zte_e8820v2
